@@ -42,3 +42,34 @@ func main() {
 		log.Fatal("ListenAndServe: ", err)
 	}
 }
+
+func handleConnections(w http.ResponseWriter, r *http.Request) {
+	// must upgrade to websocket first.
+	ws, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	//Make sure to close the connection after return
+	//	|
+	//	v
+	defer ws.Close()
+
+	//Register client
+	//	|
+	//	v
+	clients[ws] = true
+
+	for {
+		var msg Message
+
+		// read input as json and convert it to a Message
+		err := ws.ReadJSON(&msg)
+		if err != nil {
+			log.Printf("error while reading json: %v", err)
+			delete(clients, ws)
+			break
+		}
+		// send the new message to the broadcast channel
+		broadcast <- msg
+	}
+}
