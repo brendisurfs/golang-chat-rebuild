@@ -73,3 +73,21 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 		broadcast <- msg
 	}
 }
+
+func handleMessages() {
+	for {
+		// first, we need to get the message from the channel
+		msg := <-broadcast
+
+		// send it to all clients
+		for client := range clients {
+			err := client.WriteJSON(msg)
+			if err != nil {
+				log.Printf("error: %v", err)
+				client.Close()
+				// this deletes a specific item using a key.
+				delete(clients, client)
+			}
+		}
+	}
+}
